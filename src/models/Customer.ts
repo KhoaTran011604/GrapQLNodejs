@@ -6,6 +6,9 @@ export interface ICustomer extends Document {
     phone: string
     dob: string
     address: string
+    refreshTokens: string | null
+    passwordHash: string
+    email: string
 }
 
 const customerSchema = new Schema({
@@ -26,6 +29,16 @@ const customerSchema = new Schema({
     },
 
     address: {
+        type: String
+    },
+    passwordHash: {
+        type: String
+    },
+    refreshTokens: {
+        type: String
+    }
+    ,
+    email: {
         type: String
     }
 })

@@ -1,9 +1,12 @@
 import { ApolloServer } from '@apollo/server';
-import { startStandaloneServer } from '@apollo/server/standalone';
 import mongoose from 'mongoose';
+import cookieParser from "cookie-parser";
+import { expressMiddleware } from "@apollo/server/express4";
+import express from "express";
 import dotenv from 'dotenv';
 import { typeDefs } from './schema/typeDefs';
 import { resolvers } from './resolvers';
+import { context } from "./context";
 
 dotenv.config();
 
@@ -15,16 +18,23 @@ async function startServer() {
     await mongoose.connect(MONGODB_URI);
     console.log('Connected to MongoDB');
 
+    const app = express();
+    app.use(express.json());
+    app.use(cookieParser());
+
     const server = new ApolloServer({
       typeDefs,
-      resolvers,
+      resolvers
     });
 
-    const { url } = await startStandaloneServer(server, {
-      listen: { port: PORT },
-    });
+    await server.start();
 
-    console.log(`Server ready at ${url}`);
+    app.use(
+      "/graphql",
+      expressMiddleware(server, { context })
+    );
+
+    app.listen(PORT, () => console.log(`http://localhost:${PORT}/graphql`));
   } catch (error) {
     console.error('Error starting server:', error);
     process.exit(1);
@@ -32,3 +42,8 @@ async function startServer() {
 }
 
 startServer();
+
+
+
+
+

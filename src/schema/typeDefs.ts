@@ -5,7 +5,11 @@ export const typeDefs = `#graphql
     id: ID!
     name: String!
     email: String!
-    createdAt: String!
+    phone: String
+    avatarUrl: String
+    isVerified: Boolean
+    createdAt: String
+    updatedAt: String
   }
 
   type Product {
@@ -42,8 +46,19 @@ export const typeDefs = `#graphql
     address: String
   }
 
+  type AuthPayload {
+  accessToken: String!
+  user: User!
+}
+
+  type RefreshPayload {
+    accessToken: String!
+  }
+
   # Get all, set one
   type Query {
+    me: User
+    
     users: [User!]!
     user(id: ID!): User
     products: [Product!]!
@@ -58,6 +73,11 @@ export const typeDefs = `#graphql
 
   # CRUD functions
   type Mutation {
+    register(name: String!, email: String!, password: String!, phone: String): User!
+    login(email: String!, password: String!): AuthPayload!
+    refresh: RefreshPayload!
+    logout: Boolean!
+
     createUser(name: String!, email: String!, password: String!): User!
     updateUser(id: ID!, name: String, email: String): User
     deleteUser(id: ID!): Boolean!

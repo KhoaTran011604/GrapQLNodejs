@@ -4,9 +4,12 @@ import cookieParser from "cookie-parser";
 import { expressMiddleware } from "@apollo/server/express4";
 import express from "express";
 import dotenv from 'dotenv';
+import { makeExecutableSchema } from '@graphql-tools/schema';
+import { applyMiddleware } from 'graphql-middleware';
 import { typeDefs } from './schema/typeDefs';
 import { resolvers } from './resolvers';
 import { context } from "./context";
+import { permissions } from "./permissions";
 
 dotenv.config();
 
@@ -22,9 +25,15 @@ async function startServer() {
     app.use(express.json());
     app.use(cookieParser());
 
+    // Bước 1: Tạo executable schema từ typeDefs và resolvers
+    const executableSchema = makeExecutableSchema({ typeDefs, resolvers });
+
+    // Bước 2: Áp dụng GraphQL Shield permissions vào schema
+    const schemaWithPermissions = applyMiddleware(executableSchema, permissions);
+
+    // Bước 3: Tạo Apollo Server với schema đã có permissions
     const server = new ApolloServer({
-      typeDefs,
-      resolvers
+      schema: schemaWithPermissions
     });
 
     await server.start();

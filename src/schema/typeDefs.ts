@@ -44,6 +44,7 @@ export const typeDefs = `#graphql
     gender: String
     phone: String!
     address: String
+    role: String
   }
 
   type AuthPayload {

@@ -10,7 +10,8 @@ import {
   signRefreshToken,
   verifyRefreshToken
 } from "../utils/jwt";
-import { requireAuth } from "../utils/auth";
+// requireAuth đã được thay thế bởi GraphQL Shield
+// Authorization được xử lý trong src/permissions/index.ts
 
 const COOKIE_NAME = "refreshToken";
 export const resolvers = {
@@ -21,12 +22,10 @@ export const resolvers = {
     },
 
 
-    users: async (_: any, __: any, ctx: GQLContext) => {
-      requireAuth(ctx);
+    users: async () => {
       return await User.find();
     },
-    user: async (_: any, { id }: { id: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    user: async (_: any, { id }: { id: string }) => {
       return await User.findById(id);
     },
     products: async () => {
@@ -35,12 +34,10 @@ export const resolvers = {
     product: async (_: any, { id }: { id: string }) => {
       return await Product.findById(id);
     },
-    orders: async (_: any, __: any, ctx: GQLContext) => {
-      requireAuth(ctx);
+    orders: async () => {
       return await Order.find().populate('userId').populate('productId');
     },
-    order: async (_: any, { id }: { id: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    order: async (_: any, { id }: { id: string }) => {
       return await Order.findById(id).populate('userId').populate('productId');
     },
     categories: async () => {
@@ -49,12 +46,10 @@ export const resolvers = {
     category: async (_: any, { id }: { id: string }) => {
       return await Category.findById(id)
     },
-    customers: async (_: any, __: any, ctx: GQLContext) => {
-      requireAuth(ctx);
+    customers: async () => {
       return await Customer.find();
     },
-    customer: async (_: any, { id }: { id: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    customer: async (_: any, { id }: { id: string }) => {
       return await Customer.findById(id)
     }
 
@@ -88,7 +83,7 @@ export const resolvers = {
       const ok = await bcrypt.compare(password, user.passwordHash);
       if (!ok) throw new Error("Invalid credentials");
 
-      const payload = { userId: user._id, email: user.email };
+      const payload = { userId: user._id, email: user.email, role: user.role, };
 
       const accessToken = signAccessToken(payload);
       const refreshToken = signRefreshToken(payload);
@@ -172,38 +167,31 @@ export const resolvers = {
       return true;
     }
     ,
-    createUser: async (_: any, { name, email, password }: { name: string; email: string; password: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    createUser: async (_: any, { name, email, password }: { name: string; email: string; password: string }) => {
       const user = new User({ name, email, password });
       return await user.save();
     },
-    updateUser: async (_: any, { id, name, email }: { id: string; name?: string; email?: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    updateUser: async (_: any, { id, name, email }: { id: string; name?: string; email?: string }) => {
       return await User.findByIdAndUpdate(id, { name, email }, { new: true });
     },
-    deleteUser: async (_: any, { id }: { id: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    deleteUser: async (_: any, { id }: { id: string }) => {
       const result = await User.findByIdAndDelete(id);
       return !!result;
     },
 
-    createProduct: async (_: any, { name, description, price, stock }: { name: string; description: string; price: number; stock: number }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    createProduct: async (_: any, { name, description, price, stock }: { name: string; description: string; price: number; stock: number }) => {
       const product = new Product({ name, description, price, stock });
       return await product.save();
     },
-    updateProduct: async (_: any, { id, name, description, price, stock }: { id: string; name?: string; description?: string; price?: number; stock?: number }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    updateProduct: async (_: any, { id, name, description, price, stock }: { id: string; name?: string; description?: string; price?: number; stock?: number }) => {
       return await Product.findByIdAndUpdate(id, { name, description, price, stock }, { new: true });
     },
-    deleteProduct: async (_: any, { id }: { id: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    deleteProduct: async (_: any, { id }: { id: string }) => {
       const result = await Product.findByIdAndDelete(id);
       return !!result;
     },
 
-    createOrder: async (_: any, { userId, productId, quantity }: { userId: string; productId: string; quantity: number }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    createOrder: async (_: any, { userId, productId, quantity }: { userId: string; productId: string; quantity: number }) => {
       const product = await Product.findById(productId);
       if (!product) {
         throw new Error('Product not found');
@@ -212,42 +200,34 @@ export const resolvers = {
       const order = new Order({ userId, productId, quantity, totalPrice });
       return await order.save();
     },
-    updateOrderStatus: async (_: any, { id, status }: { id: string; status: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    updateOrderStatus: async (_: any, { id, status }: { id: string; status: string }) => {
       return await Order.findByIdAndUpdate(id, { status }, { new: true });
     },
-    deleteOrder: async (_: any, { id }: { id: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    deleteOrder: async (_: any, { id }: { id: string }) => {
       const result = await Order.findByIdAndDelete(id);
       return !!result;
     },
 
-    createCategory: async (_: any, request: { name: string, description: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    createCategory: async (_: any, request: { name: string, description: string }) => {
       const query = new Category(request)
       return await query.save()
     },
-    updateCategory: async (_: any, request: { id: string, name: string, description: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    updateCategory: async (_: any, request: { id: string, name: string, description: string }) => {
       return await Category.findByIdAndUpdate(request.id, request, { new: true });
     },
-    deleteCategory: async (_: any, { id }: { id: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    deleteCategory: async (_: any, { id }: { id: string }) => {
       const result = await Category.findByIdAndDelete(id);
       return !!result
     },
 
-    createCustomer: async (_: any, request: { name: string, age: number, gender: string, phone: string, address: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    createCustomer: async (_: any, request: { name: string, age: number, gender: string, phone: string, address: string }) => {
       const query = new Customer(request)
       return await query.save()
     },
-    updateCustomer: async (_: any, request: { id: string, name: string, age: number, gender: string, phone: string, address: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    updateCustomer: async (_: any, request: { id: string, name: string, age: number, gender: string, phone: string, address: string }) => {
       return await Customer.findByIdAndUpdate(request.id, request, { new: true })
     },
-    deleteCustomer: async (_: any, { id }: { id: string }, ctx: GQLContext) => {
-      requireAuth(ctx);
+    deleteCustomer: async (_: any, { id }: { id: string }) => {
       const result = await Customer.findByIdAndDelete(id)
       return !!result
     }

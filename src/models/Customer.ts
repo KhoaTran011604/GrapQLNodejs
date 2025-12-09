@@ -9,6 +9,7 @@ export interface ICustomer extends Document {
     refreshTokens: string | null
     passwordHash: string
     email: string
+    role: string
 }
 
 const customerSchema = new Schema({
@@ -40,6 +41,11 @@ const customerSchema = new Schema({
     ,
     email: {
         type: String
+    }
+    ,
+    role: {
+        type: String,
+        default: "default"
     }
 })
 

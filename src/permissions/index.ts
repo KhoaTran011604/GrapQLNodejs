@@ -1,5 +1,6 @@
 import { shield, rule, allow, deny, and, or, not } from "graphql-shield";
 import { GQLContext } from "../context";
+import { Role } from "../enum";
 
 // ============================================
 // RULES - Định nghĩa các quy tắc authorization
@@ -24,7 +25,7 @@ const isAuthenticated = rule({ cache: "contextual" })(
 const isAdmin = rule({ cache: "contextual" })(
     async (_parent, _args, ctx: GQLContext, _info) => {
         // Ví dụ: kiểm tra role từ JWT payload
-        return ctx.user?.role === "admin";
+        return ctx.user?.role === Role.ADMIN;
     }
 );
 
@@ -110,7 +111,16 @@ export const permissions = shield(
         User: allow,
         // Product - phải định nghĩa TẤT CẢ fields khi dùng field-level
         Product: allow,
-        Order: allow,
+        Order: {
+            id: allow,
+            user: allow,
+            product: allow,
+            quantity: allow,
+            status: allow,
+            createdAt: allow,
+            // totalPrice: không dùng shield rule, sẽ xử lý trong field resolver
+            totalPrice: isAdmin,
+        },
         Category: allow,
         Customer: {
             id: allow,

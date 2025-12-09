@@ -26,7 +26,7 @@ export const typeDefs = `#graphql
     user: User!
     product: Product!
     quantity: Int!
-    totalPrice: Float!
+    totalPrice: Float
     status: String!
     createdAt: String!
   }

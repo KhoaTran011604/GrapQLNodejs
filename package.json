@@ -20,6 +20,7 @@
     "@graphql-tools/schema": "^10.0.30",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "graphql": "^16.12.0",
     "graphql-middleware": "^6.1.35",
@@ -30,6 +31,7 @@
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.10.1",
     "nodemon": "^2.0.22",

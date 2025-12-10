@@ -10,6 +10,12 @@ import {
   signRefreshToken,
   verifyRefreshToken
 } from "../utils/jwt";
+import {
+  ValidationError,
+  NotFoundError,
+  DatabaseError,
+  AuthenticationError
+} from '../utils/errors';
 // requireAuth đã được thay thế bởi GraphQL Shield
 // Authorization được xử lý trong src/permissions/index.ts
 
@@ -32,7 +38,32 @@ export const resolvers = {
       return await Product.find();
     },
     product: async (_: any, { id }: { id: string }) => {
-      return await Product.findById(id);
+      try {
+        if (!id) {
+          throw new ValidationError("ID sản phẩm không được để trống");
+        }
+
+        const product = await Product.findById(id);
+
+        if (!product) {
+          throw new NotFoundError(`Không tìm thấy sản phẩm với ID: ${id}`);
+        }
+
+        return product;
+      } catch (error) {
+        // Custom errors
+        if (error instanceof ValidationError || error instanceof NotFoundError) {
+          throw error;
+        }
+
+        // CastError (invalid ObjectId format)
+        if ((error as any).name === 'CastError') {
+          throw new ValidationError("ID sản phẩm không đúng định dạng");
+        }
+
+        // Database errors
+        throw new DatabaseError("Lỗi khi truy vấn sản phẩm", error);
+      }
     },
     orders: async () => {
       return await Order.find().populate('userId').populate('productId');
@@ -59,51 +90,93 @@ export const resolvers = {
     register: async (_: any, args: any) => {
       const { name, email, password, phone } = args;
 
-      const exists = await Customer.findOne({ email });
-      if (exists) throw new Error("Email already exists");
+      try {
+        // Validate inputs
+        if (!email || !password) {
+          throw new ValidationError("Email và mật khẩu không được để trống");
+        }
 
-      const passwordHash = await bcrypt.hash(password, 10);
+        // Kiểm tra email đã tồn tại
+        const exists = await Customer.findOne({ email });
+        if (exists) {
+          throw new ValidationError("Email đã được sử dụng");
+        }
 
-      const user = await Customer.create({
-        name,
-        email,
-        phone,
-        passwordHash
-      });
+        const passwordHash = await bcrypt.hash(password, 10);
 
-      return user;
+        const user = await Customer.create({
+          name,
+          email,
+          phone,
+          passwordHash
+        });
+
+        return user;
+      } catch (error) {
+        // Nếu là custom error thì throw lại
+        if (error instanceof ValidationError) {
+          throw error;
+        }
+
+        // Xử lý lỗi MongoDB duplicate key
+        if ((error as any).code === 11000) {
+          throw new ValidationError("Email đã được sử dụng");
+        }
+
+        // Các lỗi khác
+        throw new DatabaseError("Lỗi khi đăng ký tài khoản", error);
+      }
     },
 
     login: async (_: any, args: any, ctx: GQLContext) => {
       const { email, password } = args;
 
-      const user = await Customer.findOne({ email });
-      if (!user) throw new Error("Invalid credentials");
+      try {
+        // Validate input
+        if (!email || !password) {
+          throw new ValidationError("Email và mật khẩu không được để trống");
+        }
 
-      const ok = await bcrypt.compare(password, user.passwordHash);
-      if (!ok) throw new Error("Invalid credentials");
+        const user = await Customer.findOne({ email });
+        if (!user) {
+          throw new AuthenticationError("Email hoặc mật khẩu không đúng");
+        }
 
-      const payload = { userId: user._id, email: user.email, role: user.role, };
+        const ok = await bcrypt.compare(password, user.passwordHash);
+        if (!ok) {
+          throw new AuthenticationError("Email hoặc mật khẩu không đúng");
+        }
 
-      const accessToken = signAccessToken(payload);
-      const refreshToken = signRefreshToken(payload);
+        const payload = { userId: user._id, email: user.email, role: user.role, };
 
-      // Lưu refresh token vào DB
-      user.refreshTokens = refreshToken;
-      await user.save();
+        const accessToken = signAccessToken(payload);
+        const refreshToken = signRefreshToken(payload);
 
-      // Gửi refresh token qua cookie HttpOnly
-      ctx.res.cookie(COOKIE_NAME, refreshToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      });
+        // Lưu refresh token vào DB
+        user.refreshTokens = refreshToken;
+        await user.save();
 
-      return {
-        accessToken,
-        user
-      };
+        // Gửi refresh token qua cookie HttpOnly
+        ctx.res.cookie(COOKIE_NAME, refreshToken, {
+          httpOnly: true,
+          secure: false,
+          sameSite: "lax",
+          maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        return {
+          accessToken,
+          user
+        };
+      } catch (error) {
+        // Nếu là custom error thì throw lại
+        if (error instanceof ValidationError || error instanceof AuthenticationError) {
+          throw error;
+        }
+
+        // Các lỗi khác
+        throw new DatabaseError("Lỗi khi đăng nhập", error);
+      }
     },
 
     refresh: async (_: any, __: any, ctx: GQLContext) => {

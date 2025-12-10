@@ -122,16 +122,7 @@ export const permissions = shield(
             totalPrice: isAdmin,
         },
         Category: allow,
-        Customer: {
-            id: allow,
-            name: allow,
-            age: allow,
-            gender: allow,
-            role: allow,
-            // phone & address: cần isAdmin mới thấy
-            phone: allow,
-            address: allow,
-        },
+        Customer: allow,
     },
     {
         // Cho phép error từ resolver đi qua (không bị shield bắt)
